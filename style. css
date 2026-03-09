@@ -1,33 +1,28 @@
-body {
-    background-color: #0d1117; /* Rangi ya giza kama GitHub */
-    color: white;
-    font-family: Arial, sans-serif;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    height: 100vh;
-    margin: 0;
-}
+<!DOCTYPE html>
+<html lang="sw">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Philipo | Portfolio</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="glass-card">
+        <div class="profile-img">P</div> <h1>Philipo Coder</h1>
+        <p class="title">Full-Stack Developer in the Making</p>
+        
+        <div class="skills">
+            <span>HTML</span>
+            <span>CSS</span>
+            <span>Python</span>
+            <span>GitHub</span>
+        </div>
 
-.card {
-    background-color: #161b22;
-    padding: 30px;
-    border-radius: 15px;
-    border: 1px solid #30363d;
-    text-align: center;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.5);
-}
+        <div class="bio">
+            <p>Najifunza kutengeneza mifumo ya kidijitali na kuleta suluhisho kupitia kodi.</p>
+        </div>
 
-button {
-    background-color: #238636;
-    color: white;
-    border: none;
-    padding: 10px 20px;
-    border-radius: 5px;
-    cursor: pointer;
-    font-weight: bold;
-}
-
-button:hover {
-    background-color: #2ea043;
-}
+        <a href="https://github.com/Philipo-Coder" class="btn">Niangalie GitHub</a>
+    </div>
+</body>
+</html>
