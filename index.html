@@ -123,7 +123,8 @@
             ctx.save();
             ctx.translate(this.x + this.size/2, this.y + this.size/2);
             ctx.scale(-1, 1);
-            ctx.shadowColor = "#ffd700"; ctx.shadowBlur = 15;
+            // KIVULI KIMEONDOLEWA HAPA
+            ctx.shadowBlur = 0; // Hii inafuta kivuli chochote
             ctx.font = this.size + "px Arial";
             ctx.fillText("🐒", -this.size/2, this.size/2);
             ctx.restore();
@@ -148,7 +149,6 @@
         
         obstacles.push({ x: canvas.width, top: h, bottom: canvas.height - h - gap, width: 65, passed: false });
 
-        // Koin au Matunda - Uhakika wa kuonekana
         const type = Math.random() > 0.5 ? '💰' : '🍎';
         collectibles.push({ 
             x: canvas.width + 150, 
@@ -168,7 +168,6 @@
         if (monkey.y + monkey.size > canvas.height - 30 || monkey.y < 0) endGame();
         monkey.draw();
 
-        // Spawn rate inategemea level lakini speed inabaki imetulia
         let spawnRate = Math.max(70, 100 - (level * 1.1));
         if (frames % Math.floor(spawnRate) === 0 && missionCount < MISSION_GOAL) createObstacle();
 
@@ -198,7 +197,7 @@
             if (!item.collected) {
                 ctx.save();
                 ctx.shadowColor = item.type === '💰' ? "gold" : "red";
-                ctx.shadowBlur = 25;
+                ctx.shadowBlur = 25; // Koin na matunda yanaendelea kung'aa
                 ctx.font = "46px Arial";
                 ctx.fillText(item.type, item.x, item.y + 15);
                 ctx.restore();
@@ -237,7 +236,7 @@
         document.getElementById('level-up').style.display = "flex";
         setTimeout(() => {
             level++; missionCount = 0; 
-            gameSpeed += 0.1; // Speed inaongezeka kidogo sana
+            gameSpeed += 0.1;
             document.getElementById('level-up').style.display = "none";
             obstacles = []; collectibles = [];
             monkey.y = canvas.height / 2; monkey.velocity = 0;
