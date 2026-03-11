@@ -1,209 +1,281 @@
 <!DOCTYPE html>
-<html>
+<html lang="sw">
 <head>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
+    <title>Monkey Quest - Gold Edition</title>
     <style>
-        body { margin: 0; background: #000; color: #fff; font-family: 'Arial Black', sans-serif; overflow: hidden; touch-action: none; }
-        #stats { display: flex; justify-content: space-around; background: #111; padding: 10px; border-bottom: 3px solid #FFD700; font-size: 14px; color: #FFD700; height: 40px; }
+        body { margin: 0; padding: 0; overflow: hidden; background: #000; font-family: 'Arial Black', sans-serif; }
         
-        #game-container { width: 100vw; height: 50vh; background: #00BFFF; position: relative; overflow: hidden; }
-        canvas { display: block; margin: 0 auto; background: transparent; width: 100%; height: 100%; }
+        #game-container { 
+            position: relative; width: 100%; height: 68vh; 
+            background: linear-gradient(to bottom, #0077be, #001a33); 
+            overflow: hidden; border-bottom: 5px solid #ff4500;
+        }
+        
+        /* Moto wa Chini */
+        #lava-glow {
+            position: absolute; bottom: 0; width: 100%; height: 35px;
+            background: linear-gradient(0deg, #ff0000, #ff8c00, #ffff00);
+            animation: burn 0.4s infinite alternate; z-index: 5;
+            box-shadow: 0 -10px 25px rgba(255, 69, 0, 0.8);
+        }
+        @keyframes burn { from { opacity: 0.8; height: 25px; } to { opacity: 1; height: 42px; } }
 
-        /* Menu Overlay ya Machaguo */
-        #menu-overlay { 
+        /* Maandishi ya Dhahabu (UI) */
+        #ui-top { position: absolute; top: 15px; width: 100%; display: flex; justify-content: space-around; z-index: 10; }
+        .badge { 
+            background: rgba(0,0,0,0.8); padding: 8px 15px; border-radius: 12px; 
+            color: #ffd700; border: 2px solid #ffd700; 
+            font-size: 16px; font-weight: 900; text-shadow: 2px 2px 4px #000;
+        }
+        .badge span { color: #ffd700; font-size: 22px; margin-left: 5px; }
+
+        .overlay { 
             position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
-            background: rgba(0,0,0,0.85); z-index: 500; 
-            display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 15px; 
+            background: rgba(0,0,0,0.9); display: none; flex-direction: column; 
+            align-items: center; justify-content: center; z-index: 100; text-align: center;
         }
+
+        #controls { height: 32vh; background: #0a0a0a; display: flex; flex-direction: column; align-items: center; justify-content: space-evenly; }
+        .top-row { display: flex; align-items: center; gap: 10px; }
+        .level-select { background: #333; color: #ffd700; border: 2px solid #ffd700; padding: 8px; border-radius: 8px; font-weight: bold; }
         
-        .main-btn { 
-            width: 220px; padding: 15px; font-size: 18px; font-weight: bold; 
-            border-radius: 12px; border: 3px solid #fff; cursor: pointer; color: #000;
+        .small-btn { padding: 12px 20px; border-radius: 10px; border: none; font-weight: bold; color: white; font-size: 14px; cursor: pointer; text-transform: uppercase; }
+        .retry { background: #e67e22; }
+        .start { background: #ffd700; color: #000; }
+        .pause-play { background: #7f8c8d; width: 90px; }
+
+        #jump-btn { 
+            width: 94%; height: 85px; 
+            background: linear-gradient(#ffd700, #d4af37); 
+            border: 4px solid #fff; border-radius: 25px; 
+            color: #000; font-size: 32px; font-weight: 900;
+            box-shadow: 0 6px 20px rgba(255,215,0,0.4);
         }
 
-        #btn-new { background: #00FF00; }
-        #btn-cont { background: #FFD700; display: none; }
+        .floating-text {
+            position: absolute; font-weight: 900; font-size: 35px;
+            text-shadow: 3px 3px #000; pointer-events: none; animation: floatUp 0.8s forwards; z-index: 20;
+        }
+        @keyframes floatUp { from { transform: translateY(0) scale(1); opacity: 1; } to { transform: translateY(-100px) scale(1.8); opacity: 0; } }
 
-        /* Bottom Menu Area */
-        #bottom-bar { position: absolute; width: 100%; top: 52vh; display: flex; justify-content: center; gap: 5px; z-index: 100; padding: 5px; }
-        .bar-btn { flex: 1; max-width: 90px; padding: 12px 5px; font-size: 11px; font-weight: bold; border-radius: 6px; border: 2px solid #fff; background: #222; color: #fff; text-align: center; }
-
-        /* Controls */
-        .controls-section { height: 40vh; background: #000; display: flex; flex-direction: column; justify-content: center; }
-        .controls { width: 100%; display: flex; justify-content: space-evenly; align-items: center; }
-        .btn { width: 85px; height: 85px; border-radius: 50%; border: 4px solid #00FFFF; background: #222; color: #00FFFF; display: flex; align-items: center; justify-content: center; font-size: 35px; }
-        .jump-btn { width: 105px; height: 105px; border-color: #FF00FF; color: #FF00FF; }
-
-        .flash-red { animation: flash 0.2s infinite; }
-        @keyframes flash { 0% { background: #FF0000; } 50% { background: #FFFF00; } 100% { background: #00BFFF; } }
+        canvas { display: block; }
     </style>
 </head>
 <body>
 
-    <div id="stats">
-        <div>LVL: <span id="lvl">1</span>/30</div>
-        <div>⏱ <span id="timer">30</span>s</div>
-        <div>💰 <span id="score">0</span></div>
+<div id="game-container">
+    <div id="ui-top">
+        <div class="badge">SCORE: <span id="score">0</span></div>
+        <div class="badge">MSN: <span id="m-count">0</span>/10</div>
+        <div class="badge">LEVEL: <span id="level-display">1</span></div>
     </div>
-
-    <div id="game-container">
-        <canvas id="c"></canvas>
-        
-        <div id="menu-overlay">
-            <h1 style="color:#FFD700; margin-bottom:10px;">MONKEY JUMP</h1>
-            <button id="btn-new" class="main-btn" onclick="setupGame(true)">NEW GAME</button>
-            <button id="btn-cont" class="main-btn" onclick="setupGame(false)">CONTINUE</button>
-        </div>
-    </div>
-
-    <div id="bottom-bar">
-        <button class="bar-btn" style="background:#FF4500" onclick="retryLevel()">RETRY</button>
-        <button id="pauseBtn" class="bar-btn" style="background:#444" onclick="togglePause()">PAUSE</button>
-        <button class="bar-btn" style="background:#555" onclick="backToMenu()">MAIN MENU</button>
-    </div>
-
-    <div class="controls-section">
-        <div class="controls">
-            <div class="btn" ontouchstart="p.dx=-6" ontouchend="p.dx=0">◀</div>
-            <div class="btn jump-btn" ontouchstart="jump()">▲</div>
-            <div class="btn" ontouchstart="p.dx=6" ontouchend="p.dx=0">▶</div>
-        </div>
-    </div>
-
-    <script>
-        const canvas = document.getElementById("c");
-        const ctx = canvas.getContext("2d");
-        const container = document.getElementById("game-container");
-        canvas.width = 400; canvas.height = 500;
-
-        let active = false, paused = false, level = 1, timeLeft = 30, score = 0, frame = 0;
-        let p = { x: 50, y: 410, dx: 0, dy: 0, jump: false, happy: 0, won: false };
-        let platforms = [], coins = [], flag = {x: 0, y: 0}, particles = [];
-
-        function checkStorage() {
-            if(localStorage.getItem('monkey_lvl')) {
-                document.getElementById('btn-cont').style.display = 'block';
-            } else {
-                document.getElementById('btn-cont').style.display = 'none';
-            }
-        }
-        checkStorage();
-
-        function setupGame(isNew) {
-            if(isNew) { level = 1; score = 0; } 
-            else { 
-                level = parseInt(localStorage.getItem('monkey_lvl')) || 1;
-                score = parseInt(localStorage.getItem('monkey_score')) || 0;
-            }
-            document.getElementById("score").innerText = score;
-            document.getElementById("menu-overlay").style.display = "none";
-            active = true;
-            initLevel(level);
-            loop();
-        }
-
-        function backToMenu() {
-            active = false;
-            document.getElementById("menu-overlay").style.display = "flex";
-            checkStorage();
-        }
-
-        function initLevel(n) {
-            let speed = 1.0 + (n * 0.22);
-            platforms = [
-                { x: 0, y: 450, w: 160, h: 25, moving: false },
-                { x: 20, y: 350, w: 140, h: 25, moving: true, dir: 1, speed: speed },
-                { x: 230, y: 250, w: 140, h: 25, moving: true, dir: -1, speed: speed + 0.4 },
-                { x: 40, y: 150, w: 140, h: 25, moving: true, dir: 1, speed: speed + 0.7 },
-                { x: 130, y: 60, w: 160, h: 25, moving: false }
-            ];
-            coins = platforms.slice(1, 4).map(pl => ({ x: pl.x + 50, y: pl.y - 30, got: false }));
-            flag = { x: platforms[4].x + 70, y: platforms[4].y - 55 };
-            p.x = 60; p.y = 410; p.dy = 0; p.dx = 0; p.won = false; p.happy = 0;
-            particles = []; 
-            timeLeft = Math.max(12, 35 - Math.floor(n/1.8));
-            container.classList.remove("flash-red");
-            document.getElementById("lvl").innerText = n;
-            paused = false;
-            document.getElementById("pauseBtn").innerText = "PAUSE";
-            localStorage.setItem('monkey_lvl', level);
-            localStorage.setItem('monkey_score', score);
-        }
-
-        function drawWorld() {
-            ctx.fillStyle = "#8B4513"; ctx.fillRect(10, 390, 60, 60);
-            ctx.fillStyle = "#FF0000"; ctx.beginPath(); ctx.moveTo(5,390); ctx.lineTo(40,360); ctx.lineTo(75,390); ctx.fill();
-            ctx.fillStyle = "#228B22";
-            for(let i=0; i<160; i+=25) { ctx.beginPath(); ctx.arc(i+12, 450, 10, Math.PI, 0); ctx.fill(); }
-        }
-
-        function drawMonkey(x, y) {
-            frame++;
-            let walk = (active && !paused && p.dx !== 0) ? Math.sin(frame * 0.22) * 8 : 0;
-            ctx.strokeStyle = "#FF4500"; ctx.lineWidth = 3;
-            ctx.beginPath(); ctx.moveTo(x+5, y+25); ctx.lineTo(x-4, y+25+walk); ctx.stroke();
-            ctx.beginPath(); ctx.moveTo(x+20, y+25); ctx.lineTo(x+29, y+25-walk); ctx.stroke();
-            ctx.beginPath(); ctx.moveTo(x+8, y+32); ctx.lineTo(x+3, y+44+walk/2); ctx.stroke();
-            ctx.beginPath(); ctx.moveTo(x+17, y+32); ctx.lineTo(x+22, y+44-walk/2); ctx.stroke();
-            ctx.fillStyle = "#FF4500"; ctx.beginPath(); ctx.arc(x+12, y+10, 10, 0, 7); ctx.fill();
-            ctx.fillRect(x+5, y+20, 15, 12);
-            ctx.fillStyle = "#FFE4B5"; ctx.beginPath(); ctx.arc(x+12, y+13, 7, 0, 7); ctx.fill();
-            ctx.fillStyle = "black"; ctx.fillRect(x+9, y+10, 2, 2); ctx.fillRect(x+13, y+10, 2, 2);
-            if(p.won || p.happy > 0) {
-                ctx.strokeStyle = "red"; ctx.lineWidth = 2;
-                ctx.beginPath(); ctx.arc(x+12, y+14, 4, 0, Math.PI); ctx.stroke();
-                if(p.happy > 0) p.happy--;
-            } else { ctx.fillStyle = "black"; ctx.fillRect(x+10, y+16, 4, 1); }
-        }
-
-        function update() {
-            if(!active || paused) return;
-            p.dy += 0.8; p.y += p.dy; p.x += p.dx;
-            platforms.forEach(pl => {
-                if(pl.moving) { pl.x += pl.speed * pl.dir; if(pl.x > 255 || pl.x < 10) pl.dir *= -1; }
-                if(p.x+20 > pl.x && p.x < pl.x+pl.w && p.y+35 > pl.y && p.y+35 < pl.y+15 && p.dy > 0) {
-                    p.dy = 0; p.y = pl.y - 35; p.jump = false;
-                    if(pl.moving) p.x += pl.speed * pl.dir;
-                }
-            });
-            coins.forEach(c => {
-                if(!c.got && Math.abs(p.x - c.x) < 35 && Math.abs(p.y - c.y) < 35) {
-                    c.got = true; score += 100; p.happy = 45;
-                    document.getElementById("score").innerText = score;
-                }
-            });
-            if(p.y > 480) { active = false; container.classList.add("flash-red"); alert("GAME OVER! Try again!"); }
-            if(Math.abs(p.x - flag.x) < 45 && Math.abs(p.y - flag.y) < 45) {
-                p.won = true; active = false;
-                for(let i=0; i<40; i++) particles.push({x:p.x+10, y:p.y, dx:(Math.random()-0.5)*12, dy:(Math.random()-0.5)*12, c:`hsl(${Math.random()*360},100%,50%)`});
-                setTimeout(() => {
-                    if(level < 30) { level++; initLevel(level); active = true; loop(); } 
-                    else { alert("AWESOME! Level 30 Cleared!"); localStorage.clear(); location.reload(); }
-                }, 1500);
-            }
-        }
-
-        function draw() {
-            ctx.clearRect(0,0,400,500); drawWorld();
-            ctx.fillStyle = "red"; ctx.fillRect(0, 485, 400, 15);
-            platforms.forEach(pl => { ctx.fillStyle = "#5D2906"; ctx.fillRect(pl.x, pl.y, pl.w, pl.h); });
-            ctx.fillStyle = "gold"; coins.forEach(c => { if(!c.got) { ctx.beginPath(); ctx.arc(c.x, c.y, 9, 0, 7); ctx.fill(); }});
-            ctx.fillStyle = "white"; ctx.fillRect(flag.x, flag.y, 3, 40); ctx.fillStyle="red"; ctx.fillRect(flag.x, flag.y, 25, 18);
-            particles.forEach(pt => { ctx.fillStyle = pt.c; ctx.fillRect(pt.x, pt.y, 5, 5); pt.x += pt.dx; pt.y += pt.dy; pt.dy += 0.2; });
-            drawMonkey(p.x, p.y);
-        }
-
-        function loop() { if(active) { update(); draw(); requestAnimationFrame(loop); } }
-        function retryLevel() { active = true; initLevel(level); loop(); }
-        function togglePause() { 
-            if(!active) return; paused = !paused; 
-            document.getElementById("pauseBtn").innerText = paused ? "RESUME" : "PAUSE"; 
-            if(!paused) loop(); 
-        }
-        function jump() { if(!p.jump) { p.dy = -15.5; p.jump = true; } }
-        setInterval(() => { if(active && !paused) { timeLeft--; document.getElementById("timer").innerText = timeLeft; if(timeLeft <= 0) { active = false; alert("Time's up!"); }}}, 1000);
-    </script>
-</body>
-    </html>
-
     
+    <div id="lava-glow"></div>
+
+    <div id="level-up" class="overlay">
+        <h1 style="color: #ffd700; font-size: 40px;">MONKEY QUEST</h1>
+        <h2 style="color: #fff;">LEVEL COMPLETE! 🎯</h2>
+        <p style="color: white; font-size: 18px;">Inapakia Changamoto Inayofuata...</p>
+    </div>
+
+    <div id="game-over" class="overlay">
+        <h1 style="color: #ff4500; font-size: 40px;">GAME OVER! 🐒🔥</h1>
+        <p style="color: white; font-size: 20px;">Monkey Quest Imeishia Hapa!</p>
+        <button class="small-btn retry" style="font-size: 20px; padding: 15px 40px;" onclick="startGame()">JARIBU TENA</button>
+    </div>
+
+    <canvas id="gameCanvas"></canvas>
+</div>
+
+<div id="controls">
+    <div class="top-row">
+        <select id="level-picker" class="level-select"></select>
+        <button class="small-btn retry" onclick="startGame()">RETRY</button>
+        <button id="pp-btn" class="small-btn pause-play" onclick="togglePause()">PAUSE</button>
+        <button class="small-btn start" onclick="startGame()">START</button>
+    </div>
+    <button id="jump-btn">RUKA 🐒</button>
+</div>
+
+<script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    const container = document.getElementById('game-container');
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight * 0.68;
+
+    const picker = document.getElementById('level-picker');
+    for(let i=1; i<=30; i++) {
+        let opt = document.createElement('option');
+        opt.value = i; opt.innerHTML = "Level " + i;
+        picker.appendChild(opt);
+    }
+
+    let score = 0, level = 1, missionCount = 0, frames = 0, gameSpeed = 3.2, gameActive = false, isPaused = false;
+    let obstacles = [], collectibles = [];
+    const MISSION_GOAL = 10;
+
+    const monkey = {
+        x: 70, y: canvas.height / 2, size: 48, velocity: 0, gravity: 0.45, jump: -8,
+        draw() {
+            ctx.save();
+            ctx.translate(this.x + this.size/2, this.y + this.size/2);
+            ctx.scale(-1, 1);
+            ctx.shadowColor = "#ffd700"; ctx.shadowBlur = 15;
+            ctx.font = this.size + "px Arial";
+            ctx.fillText("🐒", -this.size/2, this.size/2);
+            ctx.restore();
+        }
+    };
+
+    function showPopupText(txt, x, y, color) {
+        const div = document.createElement('div');
+        div.className = 'floating-text';
+        div.innerText = txt;
+        div.style.left = x + 'px';
+        div.style.top = y + 'px';
+        div.style.color = color;
+        container.appendChild(div);
+        setTimeout(() => div.remove(), 800);
+    }
+
+    function createObstacle() {
+        if (missionCount >= MISSION_GOAL) return;
+        const gap = Math.max(120, 200 - (level * 2.5)); 
+        const h = Math.random() * (canvas.height - gap - 160) + 80;
+        
+        obstacles.push({ x: canvas.width, top: h, bottom: canvas.height - h - gap, width: 65, passed: false });
+
+        // Koin au Matunda - Uhakika wa kuonekana
+        const type = Math.random() > 0.5 ? '💰' : '🍎';
+        collectibles.push({ 
+            x: canvas.width + 150, 
+            y: h + (gap / 2), 
+            type: type, 
+            collected: false 
+        });
+    }
+
+    function animate() {
+        if (!gameActive || isPaused) return;
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        
+        monkey.velocity += monkey.gravity;
+        monkey.y += monkey.velocity;
+
+        if (monkey.y + monkey.size > canvas.height - 30 || monkey.y < 0) endGame();
+        monkey.draw();
+
+        // Spawn rate inategemea level lakini speed inabaki imetulia
+        let spawnRate = Math.max(70, 100 - (level * 1.1));
+        if (frames % Math.floor(spawnRate) === 0 && missionCount < MISSION_GOAL) createObstacle();
+
+        obstacles.forEach((obs, i) => {
+            obs.x -= gameSpeed;
+            ctx.fillStyle = "#3e2723"; 
+            ctx.fillRect(obs.x, 0, obs.width, obs.top);
+            ctx.fillRect(obs.x, canvas.height - obs.bottom - 20, obs.width, obs.bottom);
+            ctx.fillStyle = "#ffd700"; 
+            ctx.fillRect(obs.x, obs.top - 6, obs.width, 6);
+            ctx.fillRect(obs.x, canvas.height - obs.bottom - 26, obs.width, 6);
+
+            if (monkey.x + 35 > obs.x && monkey.x < obs.x + obs.width) {
+                if (monkey.y < obs.top || monkey.y + 40 > canvas.height - obs.bottom - 20) endGame();
+            }
+
+            if (!obs.passed && obs.x + obs.width < monkey.x) {
+                score++; missionCount++; obs.passed = true;
+                updateUI();
+                if (missionCount >= MISSION_GOAL && obstacles.length <= 1) checkLevelComplete();
+            }
+            if (obs.x + obs.width < -100) obstacles.splice(i, 1);
+        });
+
+        collectibles.forEach((item, i) => {
+            item.x -= gameSpeed;
+            if (!item.collected) {
+                ctx.save();
+                ctx.shadowColor = item.type === '💰' ? "gold" : "red";
+                ctx.shadowBlur = 25;
+                ctx.font = "46px Arial";
+                ctx.fillText(item.type, item.x, item.y + 15);
+                ctx.restore();
+
+                let dX = (monkey.x + 24) - item.x;
+                let dY = (monkey.y + 24) - item.y;
+                let dist = Math.sqrt(dX*dX + dY*dY);
+
+                if (dist < 48) {
+                    item.collected = true;
+                    if (item.type === '💰') {
+                        score += 5;
+                        showPopupText("+5", monkey.x, monkey.y, "#ffd700");
+                    } else {
+                        score += 10;
+                        showPopupText("+10", monkey.x, monkey.y, "#ff0000");
+                    }
+                    updateUI();
+                }
+            }
+            if (item.x < -100) collectibles.splice(i, 1);
+        });
+
+        frames++;
+        requestAnimationFrame(animate);
+    }
+
+    function updateUI() {
+        document.getElementById('score').innerText = score;
+        document.getElementById('level-display').innerText = level;
+        document.getElementById('m-count').innerText = missionCount;
+    }
+
+    function checkLevelComplete() {
+        gameActive = false;
+        document.getElementById('level-up').style.display = "flex";
+        setTimeout(() => {
+            level++; missionCount = 0; 
+            gameSpeed += 0.1; // Speed inaongezeka kidogo sana
+            document.getElementById('level-up').style.display = "none";
+            obstacles = []; collectibles = [];
+            monkey.y = canvas.height / 2; monkey.velocity = 0;
+            updateUI();
+            gameActive = true;
+            animate();
+        }, 2000);
+    }
+
+    function togglePause() {
+        if (!gameActive) return;
+        isPaused = !isPaused;
+        document.getElementById('pp-btn').innerText = isPaused ? "PLAY" : "PAUSE";
+        if (!isPaused) animate();
+    }
+
+    function endGame() {
+        gameActive = false;
+        document.getElementById('game-over').style.display = "flex";
+    }
+
+    function startGame() {
+        level = parseInt(document.getElementById('level-picker').value);
+        score = 0; missionCount = 0; 
+        gameSpeed = 3.2 + (level * 0.08); 
+        obstacles = []; collectibles = [];
+        monkey.y = canvas.height / 2; monkey.velocity = 0;
+        document.querySelectorAll('.overlay').forEach(el => el.style.display = "none");
+        isPaused = false;
+        document.getElementById('pp-btn').innerText = "PAUSE";
+        updateUI();
+        gameActive = true;
+        animate();
+    }
+
+    const jump = () => { if(gameActive && !isPaused) monkey.velocity = monkey.jump; };
+    document.getElementById('jump-btn').addEventListener('touchstart', (e) => { e.preventDefault(); jump(); });
+    document.getElementById('jump-btn').addEventListener('mousedown', jump);
+</script>
+</body>
+</html>
