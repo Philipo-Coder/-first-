@@ -1,28 +1,208 @@
 <!DOCTYPE html>
-<html lang="sw">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Philipo | Portfolio</title>
-    <link rel="stylesheet" href="style.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <style>
+        body { margin: 0; background: #000; color: #fff; font-family: 'Arial Black', sans-serif; overflow: hidden; touch-action: none; }
+        #stats { display: flex; justify-content: space-around; background: #111; padding: 10px; border-bottom: 3px solid #FFD700; font-size: 14px; color: #FFD700; height: 40px; }
+        
+        #game-container { width: 100vw; height: 50vh; background: #00BFFF; position: relative; overflow: hidden; }
+        canvas { display: block; margin: 0 auto; background: transparent; width: 100%; height: 100%; }
+
+        /* Menu Overlay ya Machaguo */
+        #menu-overlay { 
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
+            background: rgba(0,0,0,0.85); z-index: 500; 
+            display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 15px; 
+        }
+        
+        .main-btn { 
+            width: 220px; padding: 15px; font-size: 18px; font-weight: bold; 
+            border-radius: 12px; border: 3px solid #fff; cursor: pointer; color: #000;
+        }
+
+        #btn-new { background: #00FF00; }
+        #btn-cont { background: #FFD700; display: none; }
+
+        /* Bottom Menu Area */
+        #bottom-bar { position: absolute; width: 100%; top: 52vh; display: flex; justify-content: center; gap: 5px; z-index: 100; padding: 5px; }
+        .bar-btn { flex: 1; max-width: 90px; padding: 12px 5px; font-size: 11px; font-weight: bold; border-radius: 6px; border: 2px solid #fff; background: #222; color: #fff; text-align: center; }
+
+        /* Controls */
+        .controls-section { height: 40vh; background: #000; display: flex; flex-direction: column; justify-content: center; }
+        .controls { width: 100%; display: flex; justify-content: space-evenly; align-items: center; }
+        .btn { width: 85px; height: 85px; border-radius: 50%; border: 4px solid #00FFFF; background: #222; color: #00FFFF; display: flex; align-items: center; justify-content: center; font-size: 35px; }
+        .jump-btn { width: 105px; height: 105px; border-color: #FF00FF; color: #FF00FF; }
+
+        .flash-red { animation: flash 0.2s infinite; }
+        @keyframes flash { 0% { background: #FF0000; } 50% { background: #FFFF00; } 100% { background: #00BFFF; } }
+    </style>
 </head>
 <body>
-    <div class="glass-card">
-        <div class="profile-img">P</div> <h1>Philipo Coder</h1>
-        <p class="title">Full-Stack Developer in the Making</p>
-        
-        <div class="skills">
-            <span>HTML</span>
-            <span>CSS</span>
-            <span>Python</span>
-            <span>GitHub</span>
-        </div>
 
-        <div class="bio">
-            <p>Najifunza kutengeneza mifumo ya kidijitali na kuleta suluhisho kupitia kodi.</p>
-        </div>
-
-        <a href="https://github.com/Philipo-Coder" class="btn">Niangalie GitHub</a>
+    <div id="stats">
+        <div>LVL: <span id="lvl">1</span>/30</div>
+        <div>⏱ <span id="timer">30</span>s</div>
+        <div>💰 <span id="score">0</span></div>
     </div>
+
+    <div id="game-container">
+        <canvas id="c"></canvas>
+        
+        <div id="menu-overlay">
+            <h1 style="color:#FFD700; margin-bottom:10px;">MONKEY JUMP</h1>
+            <button id="btn-new" class="main-btn" onclick="setupGame(true)">NEW GAME</button>
+            <button id="btn-cont" class="main-btn" onclick="setupGame(false)">CONTINUE</button>
+        </div>
+    </div>
+
+    <div id="bottom-bar">
+        <button class="bar-btn" style="background:#FF4500" onclick="retryLevel()">RETRY</button>
+        <button id="pauseBtn" class="bar-btn" style="background:#444" onclick="togglePause()">PAUSE</button>
+        <button class="bar-btn" style="background:#555" onclick="backToMenu()">MAIN MENU</button>
+    </div>
+
+    <div class="controls-section">
+        <div class="controls">
+            <div class="btn" ontouchstart="p.dx=-6" ontouchend="p.dx=0">◀</div>
+            <div class="btn jump-btn" ontouchstart="jump()">▲</div>
+            <div class="btn" ontouchstart="p.dx=6" ontouchend="p.dx=0">▶</div>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById("c");
+        const ctx = canvas.getContext("2d");
+        const container = document.getElementById("game-container");
+        canvas.width = 400; canvas.height = 500;
+
+        let active = false, paused = false, level = 1, timeLeft = 30, score = 0, frame = 0;
+        let p = { x: 50, y: 410, dx: 0, dy: 0, jump: false, happy: 0, won: false };
+        let platforms = [], coins = [], flag = {x: 0, y: 0}, particles = [];
+
+        function checkStorage() {
+            if(localStorage.getItem('monkey_lvl')) {
+                document.getElementById('btn-cont').style.display = 'block';
+            } else {
+                document.getElementById('btn-cont').style.display = 'none';
+            }
+        }
+        checkStorage();
+
+        function setupGame(isNew) {
+            if(isNew) { level = 1; score = 0; } 
+            else { 
+                level = parseInt(localStorage.getItem('monkey_lvl')) || 1;
+                score = parseInt(localStorage.getItem('monkey_score')) || 0;
+            }
+            document.getElementById("score").innerText = score;
+            document.getElementById("menu-overlay").style.display = "none";
+            active = true;
+            initLevel(level);
+            loop();
+        }
+
+        function backToMenu() {
+            active = false;
+            document.getElementById("menu-overlay").style.display = "flex";
+            checkStorage();
+        }
+
+        function initLevel(n) {
+            let speed = 1.0 + (n * 0.22);
+            platforms = [
+                { x: 0, y: 450, w: 160, h: 25, moving: false },
+                { x: 20, y: 350, w: 140, h: 25, moving: true, dir: 1, speed: speed },
+                { x: 230, y: 250, w: 140, h: 25, moving: true, dir: -1, speed: speed + 0.4 },
+                { x: 40, y: 150, w: 140, h: 25, moving: true, dir: 1, speed: speed + 0.7 },
+                { x: 130, y: 60, w: 160, h: 25, moving: false }
+            ];
+            coins = platforms.slice(1, 4).map(pl => ({ x: pl.x + 50, y: pl.y - 30, got: false }));
+            flag = { x: platforms[4].x + 70, y: platforms[4].y - 55 };
+            p.x = 60; p.y = 410; p.dy = 0; p.dx = 0; p.won = false; p.happy = 0;
+            particles = []; 
+            timeLeft = Math.max(12, 35 - Math.floor(n/1.8));
+            container.classList.remove("flash-red");
+            document.getElementById("lvl").innerText = n;
+            paused = false;
+            document.getElementById("pauseBtn").innerText = "PAUSE";
+            localStorage.setItem('monkey_lvl', level);
+            localStorage.setItem('monkey_score', score);
+        }
+
+        function drawWorld() {
+            ctx.fillStyle = "#8B4513"; ctx.fillRect(10, 390, 60, 60);
+            ctx.fillStyle = "#FF0000"; ctx.beginPath(); ctx.moveTo(5,390); ctx.lineTo(40,360); ctx.lineTo(75,390); ctx.fill();
+            ctx.fillStyle = "#228B22";
+            for(let i=0; i<160; i+=25) { ctx.beginPath(); ctx.arc(i+12, 450, 10, Math.PI, 0); ctx.fill(); }
+        }
+
+        function drawMonkey(x, y) {
+            frame++;
+            let walk = (active && !paused && p.dx !== 0) ? Math.sin(frame * 0.22) * 8 : 0;
+            ctx.strokeStyle = "#FF4500"; ctx.lineWidth = 3;
+            ctx.beginPath(); ctx.moveTo(x+5, y+25); ctx.lineTo(x-4, y+25+walk); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(x+20, y+25); ctx.lineTo(x+29, y+25-walk); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(x+8, y+32); ctx.lineTo(x+3, y+44+walk/2); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(x+17, y+32); ctx.lineTo(x+22, y+44-walk/2); ctx.stroke();
+            ctx.fillStyle = "#FF4500"; ctx.beginPath(); ctx.arc(x+12, y+10, 10, 0, 7); ctx.fill();
+            ctx.fillRect(x+5, y+20, 15, 12);
+            ctx.fillStyle = "#FFE4B5"; ctx.beginPath(); ctx.arc(x+12, y+13, 7, 0, 7); ctx.fill();
+            ctx.fillStyle = "black"; ctx.fillRect(x+9, y+10, 2, 2); ctx.fillRect(x+13, y+10, 2, 2);
+            if(p.won || p.happy > 0) {
+                ctx.strokeStyle = "red"; ctx.lineWidth = 2;
+                ctx.beginPath(); ctx.arc(x+12, y+14, 4, 0, Math.PI); ctx.stroke();
+                if(p.happy > 0) p.happy--;
+            } else { ctx.fillStyle = "black"; ctx.fillRect(x+10, y+16, 4, 1); }
+        }
+
+        function update() {
+            if(!active || paused) return;
+            p.dy += 0.8; p.y += p.dy; p.x += p.dx;
+            platforms.forEach(pl => {
+                if(pl.moving) { pl.x += pl.speed * pl.dir; if(pl.x > 255 || pl.x < 10) pl.dir *= -1; }
+                if(p.x+20 > pl.x && p.x < pl.x+pl.w && p.y+35 > pl.y && p.y+35 < pl.y+15 && p.dy > 0) {
+                    p.dy = 0; p.y = pl.y - 35; p.jump = false;
+                    if(pl.moving) p.x += pl.speed * pl.dir;
+                }
+            });
+            coins.forEach(c => {
+                if(!c.got && Math.abs(p.x - c.x) < 35 && Math.abs(p.y - c.y) < 35) {
+                    c.got = true; score += 100; p.happy = 45;
+                    document.getElementById("score").innerText = score;
+                }
+            });
+            if(p.y > 480) { active = false; container.classList.add("flash-red"); alert("GAME OVER! Try again!"); }
+            if(Math.abs(p.x - flag.x) < 45 && Math.abs(p.y - flag.y) < 45) {
+                p.won = true; active = false;
+                for(let i=0; i<40; i++) particles.push({x:p.x+10, y:p.y, dx:(Math.random()-0.5)*12, dy:(Math.random()-0.5)*12, c:`hsl(${Math.random()*360},100%,50%)`});
+                setTimeout(() => {
+                    if(level < 30) { level++; initLevel(level); active = true; loop(); } 
+                    else { alert("AWESOME! Level 30 Cleared!"); localStorage.clear(); location.reload(); }
+                }, 1500);
+            }
+        }
+
+        function draw() {
+            ctx.clearRect(0,0,400,500); drawWorld();
+            ctx.fillStyle = "red"; ctx.fillRect(0, 485, 400, 15);
+            platforms.forEach(pl => { ctx.fillStyle = "#5D2906"; ctx.fillRect(pl.x, pl.y, pl.w, pl.h); });
+            ctx.fillStyle = "gold"; coins.forEach(c => { if(!c.got) { ctx.beginPath(); ctx.arc(c.x, c.y, 9, 0, 7); ctx.fill(); }});
+            ctx.fillStyle = "white"; ctx.fillRect(flag.x, flag.y, 3, 40); ctx.fillStyle="red"; ctx.fillRect(flag.x, flag.y, 25, 18);
+            particles.forEach(pt => { ctx.fillStyle = pt.c; ctx.fillRect(pt.x, pt.y, 5, 5); pt.x += pt.dx; pt.y += pt.dy; pt.dy += 0.2; });
+            drawMonkey(p.x, p.y);
+        }
+
+        function loop() { if(active) { update(); draw(); requestAnimationFrame(loop); } }
+        function retryLevel() { active = true; initLevel(level); loop(); }
+        function togglePause() { 
+            if(!active) return; paused = !paused; 
+            document.getElementById("pauseBtn").innerText = paused ? "RESUME" : "PAUSE"; 
+            if(!paused) loop(); 
+        }
+        function jump() { if(!p.jump) { p.dy = -15.5; p.jump = true; } }
+        setInterval(() => { if(active && !paused) { timeLeft--; document.getElementById("timer").innerText = timeLeft; if(timeLeft <= 0) { active = false; alert("Time's up!"); }}}, 1000);
+    </script>
 </body>
-</html>
+    </html>
+    
